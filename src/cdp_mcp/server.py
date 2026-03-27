@@ -856,12 +856,16 @@ async def list_oozie_jobs(
 
 def run() -> None:
     """Entry point invoked by the cdp-mcp console script."""
+    import sys
     import structlog
 
+    # MCP stdio transport uses stdout for JSON-RPC messages.
+    # Logs MUST go to stderr to avoid corrupting the protocol.
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(
             getattr(__import__("logging"), server_cfg.log_level.upper(), 20)
         ),
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
     )
     mcp.run()
 
