@@ -1,0 +1,191 @@
+"""
+yarn_client.py — Async client for YARN ResourceManager REST API.
+"""
+from __future__ import annotations
+
+from typing import Optional
+
+import httpx
+import structlog
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+log = structlog.get_logger(__name__)
+
+
+# ── Exceptions ────────────────────────────────────────────────────────────────
+
+class YarnClientError(Exception):
+    """Base exception for YARN client errors."""
+
+
+class YarnAuthError(YarnClientError):
+    """Authentication failure."""
+
+
+class YarnNotFoundError(YarnClientError):
+    """Resource not found."""
+
+
+class YarnServiceUnavailable(YarnClientError):
+    """YARN ResourceManager temporarily unavailable."""
+
+
+# ── Client ────────────────────────────────────────────────────────────────────
+
+class YarnClient:
+    def __init__(
+        self,
+        base_url: str,
+        timeout: int = 30,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = timeout
+        self._auth = (username, password) if username and password else None
+
+    def _retry_dec(self):
+        return retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=1, max=8),
+            retry=retry_if_exception_type(
+                (httpx.TransportError, YarnServiceUnavailable)
+            ),
+            reraise=True,
+        )
+
+    async def _get(self, path: str, params: Optional[dict] = None) -> dict:
+        @self._retry_dec()
+        async def _execute() -> dict:
+            async with httpx.AsyncClient(
+                base_url=self._base_url,
+                auth=self._auth,
+                timeout=self._timeout,
+                verify=False,  # internal services often self-signed
+            ) as client:
+                try:
+                    resp = await client.get(path, params=params)
+                except httpx.TransportError:
+                    raise
+                if resp.status_code == 401:
+                    raise YarnAuthError(f"YARN auth failed: {self._base_url}")
+                if resp.status_code == 404:
+                    raise YarnNotFoundError(f"YARN resource not found: {path}")
+                if resp.status_code in (503, 504):
+                    raise YarnServiceUnavailable(
+                        f"YARN unavailable: {resp.status_code}"
+                    )
+                if resp.status_code >= 400:
+                    raise YarnClientError(
+                        f"YARN HTTP {resp.status_code}: {resp.text[:200]}"
+                    )
+                return resp.json()
+
+        return await _execute()
+
+    async def get_app(self, app_id: str) -> dict:
+        """
+        Get details of a YARN application.
+        Returns state, final_status, diagnostics, resource usage and timing info.
+        """
+        data = await self._get(f"/ws/v1/cluster/apps/{app_id}")
+        app = data.get("app", data)
+        diagnostics = app.get("diagnostics", "") or ""
+        if len(diagnostics) > 500:
+            diagnostics = diagnostics[:500] + "..."
+        result = {
+            "app_id": app.get("id"),
+            "name": app.get("name"),
+            "user": app.get("user"),
+            "queue": app.get("queue"),
+            "state": app.get("state"),
+            "final_status": app.get("finalStatus"),
+            "progress": app.get("progress"),
+            "tracking_url": app.get("trackingUrl"),
+            "diagnostics": diagnostics,
+            "elapsed_time_secs": round(app.get("elapsedTime", 0) / 1000, 1),
+            "memory_seconds": app.get("memorySeconds"),
+            "vcore_seconds": app.get("vcoreSeconds"),
+            "started_time": app.get("startedTime"),
+            "finished_time": app.get("finishedTime"),
+            "cluster_id": app.get("clusterId"),
+        }
+        if app.get("finalStatus") == "FAILED" and not diagnostics:
+            result["diagnostics"] = (
+                "No diagnostics available. "
+                "Check logs with get_service_logs(service_name='YARN', ...)."
+            )
+        return result
+
+    async def list_apps(
+        self,
+        state: Optional[str] = None,
+        queue: Optional[str] = None,
+        user: Optional[str] = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """List YARN applications (compact, no diagnostics)."""
+        params: dict = {}
+        if state:
+            params["states"] = state
+        if queue:
+            params["queues"] = queue
+        if user:
+            params["user"] = user
+
+        data = await self._get("/ws/v1/cluster/apps", params=params)
+        apps = (data.get("apps") or {}).get("app", []) or []
+        apps_sorted = sorted(
+            apps, key=lambda a: a.get("startedTime", 0), reverse=True
+        )
+        return [
+            {
+                "app_id": a.get("id"),
+                "name": a.get("name"),
+                "user": a.get("user"),
+                "queue": a.get("queue"),
+                "state": a.get("state"),
+                "final_status": a.get("finalStatus"),
+                "progress": a.get("progress"),
+                "elapsed_time_secs": round(a.get("elapsedTime", 0) / 1000, 1),
+                "started_time": a.get("startedTime"),
+            }
+            for a in apps_sorted[:limit]
+        ]
+
+    async def get_queue(self, queue_name: Optional[str] = None) -> dict:
+        """Get YARN scheduler queue info."""
+        data = await self._get("/ws/v1/cluster/scheduler")
+        scheduler = data.get("scheduler", {}).get("schedulerInfo", {})
+        if not queue_name:
+            return self._extract_queue_summary(scheduler)
+        return (
+            self._find_queue(scheduler, queue_name.lower())
+            or {"error": f"Queue '{queue_name}' not found."}
+        )
+
+    def _extract_queue_summary(self, q: dict) -> dict:
+        return {
+            "name": q.get("queueName", q.get("type", "root")),
+            "capacity": q.get("capacity"),
+            "used_capacity": q.get("usedCapacity"),
+            "absolute_capacity": q.get("absoluteCapacity"),
+            "absolute_used_capacity": q.get("absoluteUsedCapacity"),
+            "num_pending_applications": q.get("numPendingApplications", 0),
+            "num_active_applications": q.get("numActiveApplications", 0),
+            "num_containers_pending": q.get("numContainersPending", 0),
+        }
+
+    def _find_queue(self, node: dict, name: str) -> Optional[dict]:
+        if node.get("queueName", "").lower() == name:
+            return self._extract_queue_summary(node)
+        for child in (node.get("queues", {}).get("queue", []) or []):
+            found = self._find_queue(child, name)
+            if found:
+                return found
+        return None

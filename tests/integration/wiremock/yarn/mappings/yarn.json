@@ -1,0 +1,103 @@
+{
+  "mappings": [
+    {
+      "request": { "method": "GET", "urlPath": "/ws/v1/cluster/apps" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "apps": {
+            "app": [
+              {
+                "id": "application_1234567890_0001",
+                "name": "SparkJob",
+                "user": "alice",
+                "queue": "default",
+                "state": "FINISHED",
+                "finalStatus": "SUCCEEDED",
+                "progress": 100.0,
+                "elapsedTime": 60000,
+                "startedTime": 1700000000000,
+                "finishedTime": 1700000060000,
+                "diagnostics": ""
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPath": "/ws/v1/cluster/apps/application_1234567890_0001" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "app": {
+            "id": "application_1234567890_0001",
+            "name": "SparkJob",
+            "user": "alice",
+            "queue": "default",
+            "state": "FINISHED",
+            "finalStatus": "SUCCEEDED",
+            "progress": 100.0,
+            "trackingUrl": "http://localhost:8088/proxy/application_1234567890_0001",
+            "diagnostics": "",
+            "elapsedTime": 60000,
+            "memorySeconds": 120000,
+            "vcoreSeconds": 60,
+            "startedTime": 1700000000000,
+            "finishedTime": 1700000060000,
+            "clusterId": 12345
+          }
+        }
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPath": "/ws/v1/cluster/apps/application_failed_0001" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "app": {
+            "id": "application_failed_0001",
+            "name": "FailedJob",
+            "user": "bob",
+            "queue": "default",
+            "state": "FINISHED",
+            "finalStatus": "FAILED",
+            "progress": 0.0,
+            "trackingUrl": "",
+            "diagnostics": "Container exited with a non-zero exit code 1",
+            "elapsedTime": 5000,
+            "memorySeconds": 0,
+            "vcoreSeconds": 0,
+            "startedTime": 1700000000000,
+            "finishedTime": 1700000005000,
+            "clusterId": 12345
+          }
+        }
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPath": "/ws/v1/cluster/scheduler" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "scheduler": {
+            "schedulerInfo": {
+              "queueName": "root",
+              "capacity": 100.0,
+              "usedCapacity": 25.0,
+              "absoluteCapacity": 100.0,
+              "absoluteUsedCapacity": 25.0,
+              "numPendingApplications": 0,
+              "numActiveApplications": 1,
+              "numContainersPending": 0
+            }
+          }
+        }
+      }
+    }
+  ]
+}

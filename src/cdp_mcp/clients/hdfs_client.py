@@ -1,0 +1,113 @@
+"""
+hdfs_client.py — Async client for HDFS NameNode JMX API.
+"""
+from __future__ import annotations
+
+import httpx
+import structlog
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+log = structlog.get_logger(__name__)
+
+
+# ── Exceptions ────────────────────────────────────────────────────────────────
+
+class HdfsClientError(Exception):
+    """Base exception for HDFS client errors."""
+
+
+class HdfsServiceUnavailable(HdfsClientError):
+    """HDFS NameNode temporarily unavailable."""
+
+
+# ── Client ────────────────────────────────────────────────────────────────────
+
+class HdfsClient:
+    def __init__(self, base_url: str, timeout: int = 30) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = timeout
+
+    def _retry_dec(self):
+        return retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=1, max=8),
+            retry=retry_if_exception_type(
+                (httpx.TransportError, HdfsServiceUnavailable)
+            ),
+            reraise=True,
+        )
+
+    async def _jmx(self, qry: str) -> dict:
+        @self._retry_dec()
+        async def _execute() -> dict:
+            async with httpx.AsyncClient(
+                base_url=self._base_url,
+                timeout=self._timeout,
+                verify=False,
+            ) as client:
+                try:
+                    resp = await client.get("/jmx", params={"qry": qry})
+                except httpx.TransportError:
+                    raise
+                if resp.status_code in (503, 504):
+                    raise HdfsServiceUnavailable(
+                        f"HDFS NN unavailable: {resp.status_code}"
+                    )
+                if resp.status_code >= 400:
+                    raise HdfsClientError(f"HDFS JMX HTTP {resp.status_code}")
+                return resp.json()
+
+        return await _execute()
+
+    async def get_namenode_status(self) -> dict:
+        """Get HDFS NameNode status from JMX."""
+        fs_data = await self._jmx(
+            "Hadoop:service=NameNode,name=FSNamesystemState"
+        )
+        nn_data = await self._jmx(
+            "Hadoop:service=NameNode,name=NameNodeStatus"
+        )
+
+        fs = (fs_data.get("beans") or [{}])[0]
+        nn = (nn_data.get("beans") or [{}])[0]
+
+        capacity_total = fs.get("CapacityTotal", 0)
+        capacity_used = fs.get("CapacityUsed", 0)
+        capacity_remaining = fs.get("CapacityRemaining", 0)
+        capacity_used_pct = (
+            round(capacity_used / capacity_total * 100, 2) if capacity_total else 0
+        )
+
+        under_replicated = fs.get("UnderReplicatedBlocks", 0)
+        corrupt_blocks = fs.get("CorruptBlocks", 0)
+        missing_blocks = fs.get("MissingBlocks", 0)
+        safe_mode = bool(fs.get("FSState", "Operational") != "Operational")
+
+        if corrupt_blocks > 0 or missing_blocks > 0 or safe_mode:
+            health_summary = "CRITICAL"
+        elif under_replicated > 0:
+            health_summary = "DEGRADED"
+        else:
+            health_summary = "HEALTHY"
+
+        return {
+            "health_summary": health_summary,
+            "safe_mode": safe_mode,
+            "under_replicated_blocks": under_replicated,
+            "corrupt_blocks": corrupt_blocks,
+            "missing_blocks": missing_blocks,
+            "capacity_total_gb": round(capacity_total / (1024**3), 2),
+            "capacity_used_gb": round(capacity_used / (1024**3), 2),
+            "capacity_remaining_gb": round(capacity_remaining / (1024**3), 2),
+            "capacity_used_pct": capacity_used_pct,
+            "total_files_and_dirs": (
+                fs.get("FilesTotal", 0) + fs.get("Directories", 0)
+            ),
+            "active_namenode": nn.get("HostAndPort"),
+            "ha_state": nn.get("State"),
+        }

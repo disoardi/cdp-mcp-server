@@ -1,0 +1,133 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            { "name": "test-cluster", "displayName": "Test Cluster", "clusterType": "BASE_CLUSTER" }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            { "name": "YARN", "type": "YARN", "serviceState": "STARTED", "healthSummary": "GOOD" },
+            { "name": "HDFS", "type": "HDFS", "serviceState": "STARTED", "healthSummary": "GOOD" },
+            { "name": "SPARK_ON_YARN", "type": "SPARK_ON_YARN", "serviceState": "STARTED", "healthSummary": "GOOD" }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/YARN/roles"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            {
+              "name": "yarn-RESOURCEMANAGER-1",
+              "type": "RESOURCEMANAGER",
+              "hostRef": { "hostname": "localhost" },
+              "healthSummary": "GOOD"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/YARN/config"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            { "name": "yarn_resourcemanager_webapp_address", "value": "0.0.0.0:8088" }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/HDFS/roles"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            {
+              "name": "hdfs-NAMENODE-1",
+              "type": "NAMENODE",
+              "hostRef": { "hostname": "localhost" },
+              "healthSummary": "GOOD"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/HDFS/config"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "items": [] }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/SPARK_ON_YARN/roles"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "items": [
+            {
+              "name": "spark-HISTORYSERVER-1",
+              "type": "HISTORYSERVER",
+              "hostRef": { "hostname": "localhost" },
+              "healthSummary": "GOOD"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/v51/clusters/test-cluster/services/SPARK_ON_YARN/config"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "items": [] }
+      }
+    }
+  ]
+}

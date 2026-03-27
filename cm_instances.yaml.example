@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# cm_instances.yaml — CM registry for cdp-mcp FileRegistry backend
+#
+# Copy this file to cm_instances.yaml and fill in your CM credentials.
+# NEVER commit cm_instances.yaml to version control (it is in .gitignore).
+#
+# Features:
+#   - Multiple CM instances across environments
+#   - Environment variable interpolation: "${VAR_NAME}"
+#   - Knox / CDP Public Cloud load balancer support
+#   - Optional endpoint overrides for non-standard ports or HA setups
+#
+# Usage:
+#   REGISTRY_BACKEND=file REGISTRY_FILE_PATH=cm_instances.yaml cdp-mcp
+# ─────────────────────────────────────────────────────────────────────────────
+
+instances:
+
+  # ── Direct connection (most common) ──────────────────────────────────────
+  - host: cm.dev.example.com        # CM hostname or IP
+    port: 7183                      # CM API port (default: 7183)
+    username: admin                 # CM username
+    password: "${CM_DEV_PASSWORD}"  # Use env var for secrets
+    environment_name: dev           # Logical environment name (for filtering)
+    use_tls: false                  # Use HTTPS (true) or HTTP (false)
+    verify_ssl: false               # Verify TLS certificate (true/false)
+    api_version: v51                # CM API version (v40-v54 depending on CM version)
+    timeout_seconds: 30             # HTTP timeout in seconds
+    active: true                    # Set to false to disable without removing
+
+  # ── Production CM with TLS ────────────────────────────────────────────────
+  - host: cm.prod.example.com
+    port: 7183
+    username: svc-mcp-agent
+    password: "${CM_PROD_PASSWORD}"
+    environment_name: prod
+    use_tls: true
+    verify_ssl: true                # Requires valid TLS cert signed by trusted CA
+    api_version: v51
+    timeout_seconds: 30
+
+  # ── Knox / CDP Public Cloud load balancer ─────────────────────────────────
+  # Use this when CM is behind a Knox gateway (CDP Public Cloud environments).
+  # The cluster_name is the CDP DataHub cluster name visible in the console.
+  #
+  # - host: ignored-for-knox       # Not used when use_knox=true
+  #   use_knox: true
+  #   lb_host: lb.prod.cdp.example.com   # Load balancer hostname
+  #   lb_port: 443                        # Load balancer HTTPS port
+  #   cluster_name: my-datahub-cluster    # CDP DataHub cluster name
+  #   username: svc-mcp
+  #   password: "${CDP_PASSWORD}"
+  #   environment_name: cdp-prod
+  #   api_version: v51
+
+  # ── Endpoint overrides (optional) ─────────────────────────────────────────
+  # Override auto-discovered service endpoints.
+  # Useful for: HA setups, non-standard ports, Knox-proxied services.
+  # If not set, endpoints are auto-discovered from CM at startup.
+  #
+  # - host: cm.custom.example.com
+  #   port: 7183
+  #   username: admin
+  #   password: "${CM_PASSWORD}"
+  #   environment_name: custom
+  #   use_tls: false
+  #   verify_ssl: false
+  #   api_version: v51
+  #   endpoints_override:
+  #     yarn_rm: http://custom-rm.example.com:8088   # Override YARN RM URL
+  #     spark_hs: http://custom-hs.example.com:18088 # Override Spark HS URL
+  #     hdfs_nn: http://custom-nn.example.com:9870   # Override HDFS NN URL
+  #     oozie: http://custom-oozie.example.com:11000 # Override Oozie URL

@@ -1,0 +1,51 @@
+version: "3.9"
+
+# Integration test environment for cdp-mcp-server
+# Uses WireMock to simulate Cloudera Manager and service REST APIs.
+#
+# Usage:
+#   docker compose -f tests/integration/docker-compose.yml up -d
+#   REGISTRY_BACKEND=file REGISTRY_FILE_PATH=tests/integration/cm_instances.yaml \
+#     ../.venv/bin/pytest tests/integration/ -v
+#   docker compose -f tests/integration/docker-compose.yml down
+
+services:
+  # ── Cloudera Manager mock ─────────────────────────────────────────────────
+  cm-mock:
+    image: wiremock/wiremock:3.6.0
+    container_name: cdp-mcp-cm-mock
+    ports:
+      - "7183:8080"
+    volumes:
+      - ./wiremock/cm:/home/wiremock
+    command: ["--port", "8080", "--global-response-templating"]
+
+  # ── YARN ResourceManager mock ─────────────────────────────────────────────
+  yarn-mock:
+    image: wiremock/wiremock:3.6.0
+    container_name: cdp-mcp-yarn-mock
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./wiremock/yarn:/home/wiremock
+    command: ["--port", "8080", "--global-response-templating"]
+
+  # ── Spark History Server mock ─────────────────────────────────────────────
+  spark-mock:
+    image: wiremock/wiremock:3.6.0
+    container_name: cdp-mcp-spark-mock
+    ports:
+      - "18088:8080"
+    volumes:
+      - ./wiremock/spark:/home/wiremock
+    command: ["--port", "8080", "--global-response-templating"]
+
+  # ── HDFS NameNode mock ────────────────────────────────────────────────────
+  hdfs-mock:
+    image: wiremock/wiremock:3.6.0
+    container_name: cdp-mcp-hdfs-mock
+    ports:
+      - "9870:8080"
+    volumes:
+      - ./wiremock/hdfs:/home/wiremock
+    command: ["--port", "8080", "--global-response-templating"]
