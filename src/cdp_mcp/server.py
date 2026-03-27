@@ -411,6 +411,38 @@ async def list_datahubs() -> str:
     return _dump(results)
 
 
+# ── Role management tools ─────────────────────────────────────────────────────
+
+@mcp.tool()
+async def delete_role(
+    cluster_name: str,
+    service_name: str,
+    role_name: str,
+) -> str:
+    """
+    Delete a role instance from a service in Cloudera Manager.
+    Use this to remove stale, decommissioned or erroneously added role instances.
+
+    The role must be stopped before deletion — CM will reject the request otherwise.
+    Use run_service_command() or stop the role individually before calling this.
+
+    Args:
+      cluster_name: Cluster name (from list_clusters).
+      service_name: Service name (e.g. HIVE, YARN, HDFS).
+      role_name:    Full role name (e.g. hive-HIVESERVER2-abc123def456).
+
+    WARNING: This is a destructive, irreversible operation.
+    """
+    client = _pool.get_client_for_cluster(cluster_name)
+    if client is None:
+        return _no_client(cluster_name)
+    try:
+        result = await client.delete_role(cluster_name, service_name, role_name)
+        return _dump({"deleted": role_name, "result": result})
+    except Exception as exc:
+        return _dump({"error": str(exc)})
+
+
 # ── CM Management Service tools ───────────────────────────────────────────────
 
 @mcp.tool()
