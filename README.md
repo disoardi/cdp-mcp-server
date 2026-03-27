@@ -122,4 +122,4 @@ REGISTRY_BACKEND=env \
 
 Apache License 2.0 — see [LICENSE](LICENSE).
 Original work © Davide Vergari.
-Modifications © Daniele Isoardi.
+Modifications © Davide Isoardi.
