@@ -411,6 +411,62 @@ async def list_datahubs() -> str:
     return _dump(results)
 
 
+# ── CM Management Service tools ───────────────────────────────────────────────
+
+@mcp.tool()
+async def get_mgmt_service(environment_name: str | None = None) -> str:
+    """
+    Get the health and role status of the Cloudera Manager Management Service.
+    This covers internal CM roles: Host Monitor, Service Monitor, Alert Publisher,
+    Reports Manager, Event Server, Activity Monitor.
+    These roles are NOT listed by list_services() — they live under /cm/service.
+
+    Args:
+      environment_name: CM environment to query (default: first available).
+                        Use registry_list() to see environment names.
+    """
+    envs = _pool.list_environments()
+    if environment_name:
+        targets = [environment_name] if environment_name in envs else []
+    else:
+        targets = envs
+
+    if not targets:
+        return _dump({"error": "No CM environments available."})
+
+    results = []
+    for env in targets:
+        client = _pool.get_client_for_environment(env)
+        if client is None:
+            continue
+        try:
+            svc = await client.get_mgmt_service()
+            roles = await client.get_mgmt_service_roles()
+            results.append({
+                "environment": env,
+                "name": svc.get("name"),
+                "type": svc.get("type"),
+                "serviceState": svc.get("serviceState"),
+                "healthSummary": svc.get("healthSummary"),
+                "configStalenessStatus": svc.get("configStalenessStatus"),
+                "roles": [
+                    {
+                        "name": r.get("name"),
+                        "type": r.get("type"),
+                        "hostRef": r.get("hostRef", {}).get("hostname"),
+                        "roleState": r.get("roleState"),
+                        "healthSummary": r.get("healthSummary"),
+                        "configStalenessStatus": r.get("configStalenessStatus"),
+                    }
+                    for r in roles
+                ],
+            })
+        except Exception as exc:
+            results.append({"environment": env, "error": str(exc)})
+
+    return _dump(results if len(results) != 1 else results[0])
+
+
 # ── Registry management tools ─────────────────────────────────────────────────
 
 @mcp.tool()

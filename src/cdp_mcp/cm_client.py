@@ -427,6 +427,17 @@ class ClouderaManagerClient:
             data = await self._get("/audits", params=params)
         return data.get("items", [])
 
+    # ── Management Service ────────────────────────────────────────────────────
+
+    async def get_mgmt_service(self) -> dict:
+        """Return CM Management Service state and health summary."""
+        return await self._get("/cm/service")
+
+    async def get_mgmt_service_roles(self) -> list[dict]:
+        """Return all role instances of the CM Management Service."""
+        data = await self._get("/cm/service/roles")
+        return data.get("items", [])
+
     # ── DataHubs ──────────────────────────────────────────────────────────────
 
     async def list_datahubs(self) -> list[dict]:

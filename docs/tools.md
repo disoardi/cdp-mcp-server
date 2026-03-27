@@ -17,6 +17,7 @@
 | `get_audit_events` | CM audit log |
 | `list_datahubs` | Enumerate DataHub clusters |
 | `refresh_cluster_map` | Rebuild cluster→CM mapping |
+| `get_mgmt_service` | CM Management Service health and role status (Host Monitor, Service Monitor, Alert Publisher, etc.) |
 
 ## Registry Tools
 
