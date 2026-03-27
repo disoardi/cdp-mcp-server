@@ -414,6 +414,31 @@ async def list_datahubs() -> str:
 # ── Role management tools ─────────────────────────────────────────────────────
 
 @mcp.tool()
+async def delete_service(cluster_name: str, service_name: str) -> str:
+    """
+    Delete a service from a cluster in Cloudera Manager.
+    Use this to remove stub, orphaned or decommissioned services
+    (e.g. STUB_DFS, standalone Tez).
+
+    The service must be stopped before deletion — CM will reject the request otherwise.
+
+    Args:
+      cluster_name: Cluster name (from list_clusters).
+      service_name: Service name as shown in CM (e.g. STUB_DFS-4555, tez).
+
+    WARNING: This is a destructive, irreversible operation.
+    """
+    client = _pool.get_client_for_cluster(cluster_name)
+    if client is None:
+        return _no_client(cluster_name)
+    try:
+        result = await client.delete_service(cluster_name, service_name)
+        return _dump({"deleted": service_name, "result": result})
+    except Exception as exc:
+        return _dump({"error": str(exc)})
+
+
+@mcp.tool()
 async def delete_role(
     cluster_name: str,
     service_name: str,

@@ -12,6 +12,7 @@
 | `get_config` | Read service configuration |
 | `update_config` | Write service configuration |
 | `run_service_command` | Execute async CM command (restart, deploy config, etc.) |
+| `delete_service` | Delete a stale/orphaned service from a cluster (irreversible) |
 | `delete_role` | Delete a stale/decommissioned role instance (irreversible) |
 | `get_command_status` | Poll async command status |
 | `get_host_status` | Host health, roles, rack info |

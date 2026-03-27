@@ -427,6 +427,15 @@ class ClouderaManagerClient:
             data = await self._get("/audits", params=params)
         return data.get("items", [])
 
+    # ── Service / role management ─────────────────────────────────────────────
+
+    async def delete_service(self, cluster_name: str, service_name: str) -> dict:
+        """Delete a service from a cluster. Returns the deleted service object."""
+        return await self._request(
+            "DELETE",
+            f"/clusters/{cluster_name}/services/{service_name}",
+        )
+
     # ── Role management ───────────────────────────────────────────────────────
 
     async def delete_role(
