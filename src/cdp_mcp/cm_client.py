@@ -5,8 +5,8 @@ cm_client.py — Async HTTP client for the Cloudera Manager REST API.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import structlog
@@ -56,11 +56,11 @@ class ClouderaManagerClient:
     ) -> None:
         self.cfg = settings
         self._server_cfg = server_cfg
-        self._http: Optional[httpx.AsyncClient] = None
+        self._http: httpx.AsyncClient | None = None
 
     # ── Async context manager ─────────────────────────────────────────────────
 
-    async def __aenter__(self) -> "ClouderaManagerClient":
+    async def __aenter__(self) -> ClouderaManagerClient:
         await self.connect()
         return self
 
@@ -108,9 +108,9 @@ class ClouderaManagerClient:
         self,
         method: str,
         path: str,
-        params: Optional[dict] = None,
-        json: Optional[Any] = None,
-        headers: Optional[dict] = None,
+        params: dict | None = None,
+        json: Any | None = None,
+        headers: dict | None = None,
     ) -> Any:
         assert self._http, "Client not initialised. Call connect() or use async with."
 
@@ -151,7 +151,7 @@ class ClouderaManagerClient:
 
         return await _execute()
 
-    async def _get(self, path: str, params: Optional[dict] = None) -> Any:
+    async def _get(self, path: str, params: dict | None = None) -> Any:
         log.debug("cm_client.get", path=path)
         return await self._request("GET", path, params=params)
 
@@ -163,7 +163,7 @@ class ClouderaManagerClient:
         log.debug("cm_client.post", path=path)
         return await self._request("POST", path, json=json)
 
-    async def _get_text(self, path: str, params: Optional[dict] = None) -> str:
+    async def _get_text(self, path: str, params: dict | None = None) -> str:
         assert self._http, "Client not initialised."
         log.debug("cm_client.get_text", path=path)
         response = await self._http.get(path, params=params)
@@ -177,15 +177,15 @@ class ClouderaManagerClient:
 
     @staticmethod
     def _now_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     @staticmethod
     def _validate_time_range(
-        start_time: Optional[str],
-        end_time: Optional[str],
+        start_time: str | None,
+        end_time: str | None,
     ) -> tuple[str, str]:
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if end_time is None:
             end_time = now.isoformat()
         if start_time is None:
@@ -263,10 +263,10 @@ class ClouderaManagerClient:
     async def get_alerts(
         self,
         cluster_name: str,
-        category: Optional[str] = None,
-        severity: Optional[str] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
+        category: str | None = None,
+        severity: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
         limit: int = 50,
     ) -> list[dict]:
         start_time, end_time = self._validate_time_range(start_time, end_time)
@@ -289,8 +289,8 @@ class ClouderaManagerClient:
         cluster_name: str,
         service_name: str,
         metric_names: list[str],
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
     ) -> list[dict]:
         start_time, end_time = self._validate_time_range(start_time, end_time)
         metric_selector = ", ".join(metric_names)
@@ -370,8 +370,8 @@ class ClouderaManagerClient:
 
     async def get_host_status(
         self,
-        cluster_name: Optional[str] = None,
-        host_filter: Optional[str] = None,
+        cluster_name: str | None = None,
+        host_filter: str | None = None,
     ) -> list[dict]:
         if cluster_name:
             data = await self._get(f"/clusters/{cluster_name}/hosts")
@@ -402,11 +402,11 @@ class ClouderaManagerClient:
 
     async def get_audit_events(
         self,
-        cluster_name: Optional[str] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        service_name: Optional[str] = None,
-        user_name: Optional[str] = None,
+        cluster_name: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        service_name: str | None = None,
+        user_name: str | None = None,
         limit: int = 50,
     ) -> list[dict]:
         start_time, end_time = self._validate_time_range(start_time, end_time)

@@ -4,13 +4,11 @@ cm_pool.py — Multi-CM connection pool with auto-discovery of service endpoints
 """
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import structlog
 
-from cdp_mcp.cm_client import ClouderaManagerClient, CMClientError, CMNotFoundError
+from cdp_mcp.cm_client import ClouderaManagerClient, CMClientError
 from cdp_mcp.config import ClouderaManagerSettings, ServerSettings
 
 log = structlog.get_logger(__name__)
@@ -21,10 +19,10 @@ log = structlog.get_logger(__name__)
 @dataclass
 class ServiceEndpoints:
     """Discovered application service endpoints for a single CDP cluster."""
-    yarn_rm_url: Optional[str] = None
-    spark_hs_url: Optional[str] = None
-    hdfs_nn_url: Optional[str] = None
-    oozie_url: Optional[str] = None
+    yarn_rm_url: str | None = None
+    spark_hs_url: str | None = None
+    hdfs_nn_url: str | None = None
+    oozie_url: str | None = None
 
 
 # ── CMPool ────────────────────────────────────────────────────────────────────
@@ -369,7 +367,7 @@ class CMPool:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def get_client_for_cluster(self, cluster_name: str) -> Optional[ClouderaManagerClient]:
+    def get_client_for_cluster(self, cluster_name: str) -> ClouderaManagerClient | None:
         """Return the CM client responsible for cluster_name, or None."""
         return self._cluster_map.get(cluster_name.lower())
 
@@ -385,7 +383,7 @@ class CMPool:
 
     def get_client_for_environment(
         self, environment_name: str
-    ) -> Optional[ClouderaManagerClient]:
+    ) -> ClouderaManagerClient | None:
         return self._clients.get(environment_name)
 
     # ── Refresh ───────────────────────────────────────────────────────────────

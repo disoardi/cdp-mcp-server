@@ -7,23 +7,23 @@ from __future__ import annotations
 import json
 import sys
 from contextlib import asynccontextmanager
-from typing import Any, Literal, Optional
+from typing import Any
 
 import structlog
 from mcp.server.fastmcp import FastMCP
 
-from cdp_mcp.config import ServerSettings, build_registry
+from cdp_mcp.clients.hdfs_client import HdfsClient
+from cdp_mcp.clients.oozie_client import OozieClient, OozieNotFoundError
+from cdp_mcp.clients.spark_client import SparkClient, SparkNotFoundError
+from cdp_mcp.clients.yarn_client import YarnClient, YarnNotFoundError
 from cdp_mcp.cm_pool import CMPool
-from cdp_mcp.clients.yarn_client import YarnClient, YarnNotFoundError, YarnClientError
-from cdp_mcp.clients.spark_client import SparkClient, SparkNotFoundError, SparkClientError
-from cdp_mcp.clients.hdfs_client import HdfsClient, HdfsClientError
-from cdp_mcp.clients.oozie_client import OozieClient, OozieNotFoundError, OozieClientError
+from cdp_mcp.config import ServerSettings, build_registry
 
 log = structlog.get_logger(__name__)
 
 server_cfg = ServerSettings()
 _registry = None
-_pool: Optional[CMPool] = None
+_pool: CMPool | None = None
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -133,10 +133,10 @@ async def get_service_logs(
 @mcp.tool()
 async def get_alerts(
     cluster_name: str,
-    category: Optional[str] = None,
-    severity: Optional[str] = None,
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
+    category: str | None = None,
+    severity: str | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
     limit: int = 50,
 ) -> str:
     """
@@ -173,8 +173,8 @@ async def get_service_metrics(
     cluster_name: str,
     service_name: str,
     metric_names: list[str],
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
 ) -> str:
     """
     Query time-series metrics for a service via the CM tsquery API.
@@ -302,8 +302,8 @@ async def get_command_status(command_id: int) -> str:
 
 @mcp.tool()
 async def get_host_status(
-    cluster_name: Optional[str] = None,
-    host_filter: Optional[str] = None,
+    cluster_name: str | None = None,
+    host_filter: str | None = None,
 ) -> str:
     """
     Get health and role information for cluster hosts.
@@ -342,11 +342,11 @@ async def get_host_status(
 
 @mcp.tool()
 async def get_audit_events(
-    cluster_name: Optional[str] = None,
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
-    service_name: Optional[str] = None,
-    user_name: Optional[str] = None,
+    cluster_name: str | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
+    service_name: str | None = None,
+    user_name: str | None = None,
     limit: int = 50,
 ) -> str:
     """
@@ -599,9 +599,9 @@ async def get_yarn_app(cluster_name: str, app_id: str) -> str:
 @mcp.tool()
 async def list_yarn_apps(
     cluster_name: str,
-    state: Optional[str] = None,
-    queue: Optional[str] = None,
-    user: Optional[str] = None,
+    state: str | None = None,
+    queue: str | None = None,
+    user: str | None = None,
     limit: int = 20,
 ) -> str:
     """
@@ -635,7 +635,7 @@ async def list_yarn_apps(
 @mcp.tool()
 async def get_yarn_queue(
     cluster_name: str,
-    queue_name: Optional[str] = None,
+    queue_name: str | None = None,
 ) -> str:
     """
     Get YARN scheduler queue capacity and utilisation.
@@ -696,7 +696,7 @@ async def get_spark_app(cluster_name: str, app_id: str) -> str:
 async def get_spark_stages(
     cluster_name: str,
     app_id: str,
-    status: Optional[str] = None,
+    status: str | None = None,
 ) -> str:
     """
     Get stage-level details for a Spark application.
@@ -726,7 +726,7 @@ async def get_spark_stages(
 @mcp.tool()
 async def list_spark_apps(
     cluster_name: str,
-    status: Optional[str] = None,
+    status: str | None = None,
     limit: int = 20,
 ) -> str:
     """
@@ -817,9 +817,9 @@ async def get_oozie_job(cluster_name: str, job_id: str) -> str:
 @mcp.tool()
 async def list_oozie_jobs(
     cluster_name: str,
-    status: Optional[str] = None,
+    status: str | None = None,
     jobtype: str = "wf",
-    user: Optional[str] = None,
+    user: str | None = None,
     limit: int = 20,
 ) -> str:
     """
@@ -856,7 +856,6 @@ async def list_oozie_jobs(
 
 def run() -> None:
     """Entry point invoked by the cdp-mcp console script."""
-    import sys
     import structlog
 
     # MCP stdio transport uses stdout for JSON-RPC messages.

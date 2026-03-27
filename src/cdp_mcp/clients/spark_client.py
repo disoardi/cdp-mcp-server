@@ -3,8 +3,6 @@ spark_client.py — Async client for Spark History Server REST API.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 import httpx
 import structlog
 from tenacity import (
@@ -48,7 +46,7 @@ class SparkClient:
             reraise=True,
         )
 
-    async def _get(self, path: str, params: Optional[dict] = None) -> dict:
+    async def _get(self, path: str, params: dict | None = None) -> dict:
         @self._retry_dec()
         async def _execute() -> dict:
             async with httpx.AsyncClient(
@@ -106,7 +104,7 @@ class SparkClient:
         }
 
     async def get_stages(
-        self, app_id: str, status: Optional[str] = None
+        self, app_id: str, status: str | None = None
     ) -> list[dict]:
         """Get stages for a Spark application."""
         params = {"status": status} if status else None
@@ -140,7 +138,7 @@ class SparkClient:
         return result
 
     async def list_apps(
-        self, status: Optional[str] = None, limit: int = 20
+        self, status: str | None = None, limit: int = 20
     ) -> list[dict]:
         """List Spark applications (compact)."""
         params: dict = {"limit": limit}

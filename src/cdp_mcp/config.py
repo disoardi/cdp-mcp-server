@@ -4,12 +4,11 @@ config.py — Pydantic settings for cdp-mcp.
 """
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from pydantic_settings import BaseSettings
-
 
 # ── ClouderaManagerSettings ───────────────────────────────────────────────────
 
@@ -26,10 +25,10 @@ class ClouderaManagerSettings:
     environment_name: str = "default"
     active: bool = True
     use_knox: bool = False
-    lb_host: Optional[str] = None
+    lb_host: str | None = None
     lb_port: int = 443
-    cluster_name: Optional[str] = None
-    endpoints_override: Optional[dict] = None
+    cluster_name: str | None = None
+    endpoints_override: dict | None = None
 
     @property
     def effective_host(self) -> str:
@@ -128,9 +127,9 @@ class ServerSettings(BaseSettings):
 
 def build_registry(settings: ServerSettings):
     """Factory: creates the appropriate registry backend based on settings."""
-    from cdp_mcp.registry.iceberg import IcebergRegistry
-    from cdp_mcp.registry.file_registry import FileRegistry
     from cdp_mcp.registry.env_registry import EnvRegistry
+    from cdp_mcp.registry.file_registry import FileRegistry
+    from cdp_mcp.registry.iceberg import IcebergRegistry
 
     match settings.registry_backend:
         case "iceberg":

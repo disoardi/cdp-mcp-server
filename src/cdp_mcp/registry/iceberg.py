@@ -5,7 +5,6 @@ iceberg.py — IcebergRegistry: stores CM instances in an Iceberg table via Impa
 from __future__ import annotations
 
 import threading
-from typing import Optional
 
 import structlog
 

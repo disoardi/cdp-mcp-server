@@ -3,8 +3,6 @@ oozie_client.py — Async client for Oozie REST API.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 import httpx
 import structlog
 from tenacity import (
@@ -61,7 +59,7 @@ class OozieClient:
             reraise=True,
         )
 
-    async def _get(self, path: str, params: Optional[dict] = None) -> dict:
+    async def _get(self, path: str, params: dict | None = None) -> dict:
         @self._retry_dec()
         async def _execute() -> dict:
             async with httpx.AsyncClient(
@@ -140,9 +138,9 @@ class OozieClient:
 
     async def list_jobs(
         self,
-        status: Optional[str] = None,
+        status: str | None = None,
         jobtype: str = "wf",
-        user: Optional[str] = None,
+        user: str | None = None,
         limit: int = 20,
     ) -> list[dict]:
         """List Oozie jobs (compact)."""

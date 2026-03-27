@@ -3,8 +3,6 @@ yarn_client.py — Async client for YARN ResourceManager REST API.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 import httpx
 import structlog
 from tenacity import (
@@ -42,8 +40,8 @@ class YarnClient:
         self,
         base_url: str,
         timeout: int = 30,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str | None = None,
+        password: str | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
@@ -59,7 +57,7 @@ class YarnClient:
             reraise=True,
         )
 
-    async def _get(self, path: str, params: Optional[dict] = None) -> dict:
+    async def _get(self, path: str, params: dict | None = None) -> dict:
         @self._retry_dec()
         async def _execute() -> dict:
             async with httpx.AsyncClient(
@@ -124,9 +122,9 @@ class YarnClient:
 
     async def list_apps(
         self,
-        state: Optional[str] = None,
-        queue: Optional[str] = None,
-        user: Optional[str] = None,
+        state: str | None = None,
+        queue: str | None = None,
+        user: str | None = None,
         limit: int = 20,
     ) -> list[dict]:
         """List YARN applications (compact, no diagnostics)."""
@@ -158,7 +156,7 @@ class YarnClient:
             for a in apps_sorted[:limit]
         ]
 
-    async def get_queue(self, queue_name: Optional[str] = None) -> dict:
+    async def get_queue(self, queue_name: str | None = None) -> dict:
         """Get YARN scheduler queue info."""
         data = await self._get("/ws/v1/cluster/scheduler")
         scheduler = data.get("scheduler", {}).get("schedulerInfo", {})
@@ -181,7 +179,7 @@ class YarnClient:
             "num_containers_pending": q.get("numContainersPending", 0),
         }
 
-    def _find_queue(self, node: dict, name: str) -> Optional[dict]:
+    def _find_queue(self, node: dict, name: str) -> dict | None:
         if node.get("queueName", "").lower() == name:
             return self._extract_queue_summary(node)
         for child in (node.get("queues", {}).get("queue", []) or []):
