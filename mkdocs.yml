@@ -1,0 +1,37 @@
+site_name: cdp-mcp-server
+site_description: MCP server for Cloudera Manager / CDP cluster administration
+site_url: https://disoardi.github.io/cdp-mcp-server/
+repo_url: https://github.com/disoardi/cdp-mcp-server
+repo_name: disoardi/cdp-mcp-server
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Tools: tools.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - tables
